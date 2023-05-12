@@ -24,7 +24,7 @@ def make_env(env_id, seed, log_dir, **kwargs):
         env = gym.make(env_id, **kwargs)
         env.seed(seed)
 
-        if str(env.__class__.__name__).find("TimeLimit") >= 0:
+        if "TimeLimit" in str(env.__class__.__name__):
             env = TimeLimitMask(env)
 
         if log_dir is not None:
@@ -87,7 +87,7 @@ class Monitor(Wrapper):
         for k in self.reset_keywords:
             v = kwargs.get(k)
             if v is None:
-                raise ValueError("Expected you to pass kwarg %s into reset" % k)
+                raise ValueError(f"Expected you to pass kwarg {k} into reset")
             self.current_reset_info[k] = v
         return self.env.reset(**kwargs)
 
@@ -131,7 +131,7 @@ class Monitor(Wrapper):
             self.episode_rewards.append(eprew)
             self.episode_lengths.append(eplen)
             self.episode_times.append(time.time() - self.tstart)
-            epinfo.update(self.current_reset_info)
+            epinfo |= self.current_reset_info
             if self.results_writer:
                 self.results_writer.write_row(epinfo)
             assert isinstance(info, dict)
@@ -170,10 +170,10 @@ class ResultsWriter(object):
             if os.path.isdir(filename):
                 filename = os.path.join(filename, Monitor.EXT)
             else:
-                filename = filename + "." + Monitor.EXT
+                filename = f"{filename}.{Monitor.EXT}"
         self.f = open(filename, "wt")
         if isinstance(header, dict):
-            header = "# {} \n".format(json.dumps(header))
+            header = f"# {json.dumps(header)} \n"
         self.f.write(header)
         self.logger = csv.DictWriter(
             self.f, fieldnames=("r", "l", "t") + tuple(extra_keys)
@@ -247,14 +247,11 @@ class VecEnv(ABC):
         return self.step_wait()
 
     def render(self):
-        print("Render not defined for %s" % self)
+        print(f"Render not defined for {self}")
 
     @property
     def unwrapped(self):
-        if isinstance(self, VecEnvWrapper):
-            return self.venv.unwrapped
-        else:
-            return self
+        return self.venv.unwrapped if isinstance(self, VecEnvWrapper) else self
 
 
 class VecEnvWrapper(VecEnv):
@@ -365,16 +362,10 @@ class DummyVecEnv(VecEnv):
 
     def _save_obs(self, e, obs):
         for k in self.keys:
-            if k is None:
-                self.buf_obs[k][e] = obs
-            else:
-                self.buf_obs[k][e] = obs[k]
+            self.buf_obs[k][e] = obs if k is None else obs[k]
 
     def _obs_from_buf(self):
-        if self.keys == [None]:
-            return self.buf_obs[None]
-        else:
-            return self.buf_obs
+        return self.buf_obs[None] if self.keys == [None] else self.buf_obs
 
 
 def worker(remote, parent_remote, env_fn_wrapper):

@@ -67,31 +67,24 @@ class PPO(object):
         action_loss_epoch = 0
         dist_entropy_epoch = 0
 
-        for e in range(self.ppo_epoch):
+        for _ in range(self.ppo_epoch):
             data_generator = rollouts.feed_forward_generator(
                 advantages, self.num_mini_batch
             )
 
             for sample in data_generator:
-                if self.mirror_function is not None:
-                    (
-                        observations_batch,
-                        actions_batch,
-                        return_batch,
-                        masks_batch,
-                        old_action_log_probs_batch,
-                        adv_targ,
-                    ) = self.mirror_function(sample)
-                else:
-                    (
-                        observations_batch,
-                        actions_batch,
-                        return_batch,
-                        masks_batch,
-                        old_action_log_probs_batch,
-                        adv_targ,
-                    ) = sample
-
+                (
+                    observations_batch,
+                    actions_batch,
+                    return_batch,
+                    masks_batch,
+                    old_action_log_probs_batch,
+                    adv_targ,
+                ) = (
+                    self.mirror_function(sample)
+                    if self.mirror_function is not None
+                    else sample
+                )
                 values, action_log_probs, dist_entropy = self.actor_critic.evaluate_actions(
                     observations_batch, actions_batch
                 )

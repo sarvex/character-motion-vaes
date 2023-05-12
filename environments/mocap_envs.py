@@ -154,12 +154,11 @@ class EnvBase(gym.Env):
             col1 = torch.cat((yaw.cos(), yaw.sin(), zeros), dim=-1)
             col2 = torch.cat((-yaw.sin(), yaw.cos(), zeros), dim=-1)
             col3 = torch.cat((zeros, zeros, ones), dim=-1)
-            matrix = torch.stack((col1, col2, col3), dim=-1)
+            return torch.stack((col1, col2, col3), dim=-1)
         else:
             col1 = torch.cat((yaw.cos(), yaw.sin()), dim=-1)
             col2 = torch.cat((-yaw.sin(), yaw.cos()), dim=-1)
-            matrix = torch.stack((col1, col2), dim=-1)
-        return matrix
+            return torch.stack((col1, col2), dim=-1)
 
     def get_vae_condition(self, normalize=False, flatten=True):
         condition = self.history[:, : self.num_condition_frames]
@@ -185,8 +184,7 @@ class EnvBase(gym.Env):
                 self.pose_vae_model.frame_size,
             )
 
-        next_frame = self.pose_vae_model.denormalize(vae_output)
-        return next_frame
+        return self.pose_vae_model.denormalize(vae_output)
 
     def reset_initial_frames(self, frame_index=None):
         # Make sure condition_range doesn't blow up
@@ -237,11 +235,9 @@ class EnvBase(gym.Env):
         displacement = self.foot_pos_history[:, 0] - self.foot_pos_history[:, 1]
         displacement = displacement[:, [[0, 1], [3, 4]]].norm(dim=-1)
 
-        foot_slide = displacement.mul(
+        return displacement.mul(
             2 - 2 ** (foot_z.max(dim=1)[0] / self.contact_threshold).clamp_(0, 1)
         )
-
-        return foot_slide
 
     def calc_energy_penalty(self, next_frame):
         action_energy = (
@@ -384,11 +380,11 @@ class RandomWalkEnv(EnvBase):
         )
 
         data_dict = {
-            "pose{}.csv".format(index): {"header": POSE_CSV_HEADER}
+            f"pose{index}.csv": {"header": POSE_CSV_HEADER}
             for index in range(pose_data.shape[0])
         }
         for index, pose in enumerate(pose_data):
-            key = "pose{}.csv".format(index)
+            key = f"pose{index}.csv"
             data_dict[key]["data"] = pose.clone()
 
         return data_dict
@@ -520,11 +516,8 @@ class TargetEnv(EnvBase):
 
         self.calc_potential()
 
-        linear_progress = self.linear_potential - old_linear_potential
         angular_progress = self.angular_potential - old_angular_potential
-        progress = linear_progress
-
-        return progress
+        return self.linear_potential - old_linear_potential
 
     def calc_env_state(self, next_frame):
         self.next_frame = next_frame
@@ -892,9 +885,7 @@ class PathFollowEnv(TargetEnv):
         target_delta = self.path[next_k] - self.root_xz.unsqueeze(1)
         # Should be negative because going from global to local
         mat = self.get_rotation_matrix(-self.root_facing)
-        # (np x 1 x 2 x 2) x (np x lookahead x 1 x 2)
-        delta = (mat.unsqueeze(1) * target_delta.unsqueeze(2)).sum(dim=-1)
-        return delta
+        return (mat.unsqueeze(1) * target_delta.unsqueeze(2)).sum(dim=-1)
 
     def get_observation_components(self):
         deltas = self.get_delta_to_k_targets()
@@ -1154,15 +1145,14 @@ class HumanMazeEnv(EnvBase):
             else:
                 self.root_facing.uniform_(0, 2 * np.pi)
                 self.root_xz.uniform_(*reset_bound)
+        elif deterministic:
+            self.root_facing.index_fill_(dim=0, index=indices, value=0)
+            self.root_xz.index_fill_(dim=0, index=indices, value=0)
         else:
-            if deterministic:
-                self.root_facing.index_fill_(dim=0, index=indices, value=0)
-                self.root_xz.index_fill_(dim=0, index=indices, value=0)
-            else:
-                new_facing = self.root_facing[indices].uniform_(0, 2 * np.pi)
-                new_xz = self.root_xz[indices].uniform_(*reset_bound)
-                self.root_facing.index_copy_(dim=0, index=indices, source=new_facing)
-                self.root_xz.index_copy_(dim=0, index=indices, source=new_xz)
+            new_facing = self.root_facing[indices].uniform_(0, 2 * np.pi)
+            new_xz = self.root_xz[indices].uniform_(*reset_bound)
+            self.root_facing.index_copy_(dim=0, index=indices, source=new_facing)
+            self.root_xz.index_copy_(dim=0, index=indices, source=new_xz)
 
         if not deterministic:
             x, y, _ = extract_joints_xyz(self.history[:, 0], *self.joint_indices, dim=1)
@@ -1173,11 +1163,10 @@ class HumanMazeEnv(EnvBase):
                     .any(dim=-1, keepdim=True)
                     .squeeze(-1)
                 )
-                if collision.any():
-                    new_xz = self.root_xz[collision].uniform_(*self.arena_bounds)
-                    self.root_xz[collision] = new_xz
-                else:
+                if not collision.any():
                     break
+                new_xz = self.root_xz[collision].uniform_(*self.arena_bounds)
+                self.root_xz[collision] = new_xz
 
 
     def reset(self, indices=None):
@@ -1217,14 +1206,12 @@ class HumanMazeEnv(EnvBase):
             ll_action = self.target_controller(torch.cat((condition, hl_action), dim=1))
             ll_action *= self.action_scale
         next_frame = self.get_vae_next_frame(ll_action)
-        state = self.calc_env_state(next_frame[:, 0])
-        return state
+        return self.calc_env_state(next_frame[:, 0])
 
     def get_observation_components(self):
         condition = self.get_vae_condition(normalize=False)
         vision = self.vision.flatten(start_dim=1, end_dim=2)
-        base_obs_component = (condition, vision)
-        return base_obs_component
+        return condition, vision
 
     def dump_additional_render_data(self):
         return {
@@ -1389,7 +1376,7 @@ class HumanMazeEnv(EnvBase):
         if not hasattr(self, "ray_ids"):
             self.ray_ids = [
                 self.viewer._p.addUserDebugLine((0, 0, 0), (1, 0, 0), (1, 0, 0))
-                for i in range(self.num_parallel * self.num_eyes)
+                for _ in range(self.num_parallel * self.num_eyes)
             ]
 
         for i, (start, end, dist) in enumerate(

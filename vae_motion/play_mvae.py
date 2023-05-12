@@ -25,7 +25,7 @@ def test_vae_replay_full_motion(args):
 
     is_rendered = True
     env = gym.make(
-        "{}:{}".format(env_module, args.env),
+        f"{env_module}:{args.env}",
         num_parallel=num_characters,
         device=device,
         pose_vae_path=pose_vae_path,

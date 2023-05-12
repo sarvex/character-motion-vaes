@@ -103,7 +103,7 @@ def time_since(since, percent):
     s = now - since
     es = s / (percent)
     rs = es - s
-    return "%s (- %s)" % (as_minutes(s), as_minutes(rs))
+    return f"{as_minutes(s)} (- {as_minutes(rs)})"
 
 
 def update_linear_schedule(optimizer, epoch, total_num_epochs, initial_lr, final_lr=0):
@@ -162,7 +162,7 @@ class EpisodeRunner(object):
             self.max_steps = env.max_timestep if max_steps is None else max_steps
 
             now_string = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            self.filename = os.path.join(self.dump_dir, "{}.mp4".format(now_string))
+            self.filename = os.path.join(self.dump_dir, f"{now_string}.mp4")
             print("\nRecording... Close to terminate recording.")
 
             try:
@@ -173,7 +173,7 @@ class EpisodeRunner(object):
                     os.remove(f)
 
         self.pbar = None
-        if self.max_steps != env.max_timestep and self.max_steps != float("inf"):
+        if self.max_steps not in [env.max_timestep, float("inf")]:
             try:
                 from tqdm import tqdm
 
@@ -219,28 +219,29 @@ class EpisodeRunner(object):
             imwrite("outfile_{:04d}.png".format(self.step), image)
 
     def save_csv_render_data(self):
-        if self.csv is not None:
-            np_obs = self.env.history[:, 0].clone().cpu().numpy()
-            # Ignore velocities
-            pose = np.concatenate((np_obs[0, 0:69], np_obs[0, 135:267]))
-            self.pose_buffer.append(pose)
+        if self.csv is None:
+            return
+        np_obs = self.env.history[:, 0].clone().cpu().numpy()
+        # Ignore velocities
+        pose = np.concatenate((np_obs[0, 0:69], np_obs[0, 135:267]))
+        self.pose_buffer.append(pose)
 
-            # Target needs to be in global coordinate
-            render_data_dict = self.env.dump_additional_render_data()
-            for file, render_data in render_data_dict.items():
-                header = render_data["header"]
-                data = render_data["data"].clone().cpu().numpy()
-                once = render_data.get("once", False)
+        # Target needs to be in global coordinate
+        render_data_dict = self.env.dump_additional_render_data()
+        for file, render_data in render_data_dict.items():
+            header = render_data["header"]
+            data = render_data["data"].clone().cpu().numpy()
+            once = render_data.get("once", False)
 
-                if file not in self.additional_render_data_buffer:
-                    list_data = data if once else []
-                    self.additional_render_data_buffer[file] = {
-                        "header": header,
-                        "data": list_data,
-                    }
+            if file not in self.additional_render_data_buffer:
+                list_data = data if once else []
+                self.additional_render_data_buffer[file] = {
+                    "header": header,
+                    "data": list_data,
+                }
 
-                if not once:
-                    self.additional_render_data_buffer[file]["data"].append(data)
+            if not once:
+                self.additional_render_data_buffer[file]["data"].append(data)
 
     def __enter__(self):
         return self

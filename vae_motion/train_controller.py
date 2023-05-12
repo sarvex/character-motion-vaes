@@ -22,7 +22,7 @@ def make_gym_environment(args):
     pose_vae_path = os.path.join(current_dir, args.vae_path)
 
     env = gym.make(
-        "{}:{}".format(args.env_module, args.env_name),
+        f"{args.env_module}:{args.env_name}",
         num_parallel=args.num_parallel,
         device=args.device,
         pose_vae_path=pose_vae_path,
@@ -100,7 +100,7 @@ def main():
     args.observation_size = env.observation_space.shape[0]
 
     # other configs
-    args.save_path = os.path.join(current_dir, "con_" + args.env_name + ".pt")
+    args.save_path = os.path.join(current_dir, f"con_{args.env_name}.pt")
 
     # sampling parameters
     args.num_frames = 10e7
@@ -168,7 +168,7 @@ def main():
     rollouts.observations[0].copy_(obs)
     rollouts.to(args.device)
 
-    log_path = os.path.join(current_dir, "log_ppo_progress-{}".format(args.env_name))
+    log_path = os.path.join(current_dir, f"log_ppo_progress-{args.env_name}")
     logger = StatsLogger(csv_path=log_path)
 
     for update in range(args.num_updates):

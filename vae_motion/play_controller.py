@@ -27,8 +27,8 @@ def get_model_paths(args):
         from glob import glob
 
         base_dir = os.path.join(pwd, args.dir)
-        candidate_controller_paths = glob(base_dir + "/con*.pt")
-        candidate_pose_vae_paths = glob(base_dir + "/posevae*.pt")
+        candidate_controller_paths = glob(f"{base_dir}/con*.pt")
+        candidate_pose_vae_paths = glob(f"{base_dir}/posevae*.pt")
 
         if len(candidate_controller_paths) == 0 or len(candidate_pose_vae_paths) == 0:
             print("Controller or VAE file not found in ", base_dir)
@@ -36,7 +36,7 @@ def get_model_paths(args):
 
         controller_path = candidate_controller_paths[0]
         for path in candidate_controller_paths:
-            if "con_" + args.env in path:
+            if f"con_{args.env}" in path:
                 controller_path = path
 
         pose_vae_path = candidate_pose_vae_paths[0]
@@ -63,7 +63,7 @@ def visualize_rl_controller_replay(args):
     controller = actor_critic.actor
 
     env = gym.make(
-        "{}:{}".format(env_module, args.env),
+        f"{env_module}:{args.env}",
         num_parallel=args.num,
         device=device,
         pose_vae_path=pose_vae_path,

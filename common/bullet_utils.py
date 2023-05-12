@@ -54,17 +54,16 @@ class BulletClient(object):
     def __getattr__(self, name):
         """Inject the client id into Bullet functions."""
         attribute = getattr(pybullet, name)
-        if inspect.isbuiltin(attribute):
-            if name not in [
-                "invertTransform",
-                "multiplyTransforms",
-                "getMatrixFromQuaternion",
-                "getEulerFromQuaternion",
-                "computeViewMatrixFromYawPitchRoll",
-                "computeProjectionMatrixFOV",
-                "getQuaternionFromEuler",
-            ]:  # A temporary hack for now.
-                attribute = functools.partial(attribute, physicsClientId=self._client)
+        if inspect.isbuiltin(attribute) and name not in [
+            "invertTransform",
+            "multiplyTransforms",
+            "getMatrixFromQuaternion",
+            "getEulerFromQuaternion",
+            "computeViewMatrixFromYawPitchRoll",
+            "computeProjectionMatrixFOV",
+            "getQuaternionFromEuler",
+        ]:
+            attribute = functools.partial(attribute, physicsClientId=self._client)
         return attribute
 
 
@@ -374,7 +373,7 @@ class Camera:
         self._counter = time.perf_counter()
 
         try:
-            self.width, self.height = self._p.getDebugVisualizerCamera()[0:2]
+            self.width, self.height = self._p.getDebugVisualizerCamera()[:2]
         except:
             self.width, self.height = 1024, 768
 

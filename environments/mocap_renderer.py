@@ -397,7 +397,7 @@ class PBLMocapViewer:
             import datetime
 
             now_string = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            filename = "{}.mp4".format(now_string)
+            filename = f"{now_string}.mp4"
 
             self._p.startStateLogging(self._p.STATE_LOGGING_VIDEO_MP4, filename)
         elif keys.get(ord(" ")) == RELEASED:

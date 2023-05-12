@@ -171,8 +171,8 @@ class MixedDecoder(nn.Module):
             index = str(index)
             torch.nn.init.kaiming_uniform_(weight)
             bias.data.fill_(0.01)
-            self.register_parameter("w" + index, weight)
-            self.register_parameter("b" + index, bias)
+            self.register_parameter(f"w{index}", weight)
+            self.register_parameter(f"b{index}", bias)
 
         # Gating network
         gate_hsize = 64
@@ -305,7 +305,7 @@ class PoseMixtureSpecialistVAE(nn.Module):
         for i in range(num_experts):
             decoder = Decoder(*args)
             self.decoders.append(decoder)
-            self.add_module("d" + str(i), decoder)
+            self.add_module(f"d{str(i)}", decoder)
 
         # Gating network
         gate_hsize = 128
@@ -689,8 +689,7 @@ class PoseVAEPolicy(nn.Module):
         return value, action, action_log_probs
 
     def get_value(self, inputs):
-        value = self.critic(inputs)
-        return value
+        return self.critic(inputs)
 
     def evaluate_actions(self, inputs, action):
         value = self.critic(inputs)

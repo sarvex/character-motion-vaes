@@ -193,21 +193,13 @@ def main():
     ).to(args.device)
 
     if isinstance(pose_vae, PoseVAE):
-        pose_vae_path = "posevae_c{}_l{}.pt".format(
-            args.num_condition_frames, args.latent_size
-        )
+        pose_vae_path = f"posevae_c{args.num_condition_frames}_l{args.latent_size}.pt"
     elif isinstance(pose_vae, PoseMixtureVAE):
-        pose_vae_path = "posevae_c{}_e{}_l{}.pt".format(
-            args.num_condition_frames, args.num_experts, args.latent_size
-        )
+        pose_vae_path = f"posevae_c{args.num_condition_frames}_e{args.num_experts}_l{args.latent_size}.pt"
     elif isinstance(pose_vae, PoseMixtureSpecialistVAE):
-        pose_vae_path = "posevae_c{}_s{}_l{}.pt".format(
-            args.num_condition_frames, args.num_experts, args.latent_size
-        )
+        pose_vae_path = f"posevae_c{args.num_condition_frames}_s{args.num_experts}_l{args.latent_size}.pt"
     elif isinstance(pose_vae, PoseVQVAE):
-        pose_vae_path = "posevae_c{}_n{}_l{}.pt".format(
-            args.num_condition_frames, args.num_embeddings, args.latent_size
-        )
+        pose_vae_path = f"posevae_c{args.num_condition_frames}_n{args.num_embeddings}_l{args.latent_size}.pt"
 
     if args.load_saved_model:
         pose_vae = torch.load(pose_vae_path, map_location=args.device)
